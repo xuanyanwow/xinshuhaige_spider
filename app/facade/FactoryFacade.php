@@ -3,6 +3,7 @@
 namespace app\facade;
 
 use app\factory\VipzhuishuFactory;
+use app\factory\XbiqugeFactory;
 
 class FactoryFacade
 {
@@ -14,6 +15,15 @@ class FactoryFacade
             $bookId = str_replace(".html","", $url);
             return [new VipzhuishuFactory(), $bookId];
         }
+
+
+        if (strpos($url,"xbiquge" ) != false){
+            $url = str_replace("https://www.xbiquge.la/","", $url);
+            $bookId = str_replace(".html","", $url);
+            return [new XbiqugeFactory(), $bookId];
+        }
+
+
         throw new \Exception("解析url错误 规则不存在");
     }
 }

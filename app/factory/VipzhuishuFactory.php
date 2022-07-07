@@ -55,7 +55,7 @@ class VipzhuishuFactory implements FactoryInterface
         return 2;
     }
 
-    public static function beforeAddLinkToJob(&$one)
+    public static function beforeAddLinkToJob(&$one,$url)
     {
         $link        = explode("/", $one['link']);
         $link[3]     = 'book';

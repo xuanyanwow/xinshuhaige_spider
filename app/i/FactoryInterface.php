@@ -15,5 +15,5 @@ interface FactoryInterface
     public static function needPages():int;
 
     /** 解析入redis执行之前 可以优化url等信息 */
-    public static function beforeAddLinkToJob(&$one);
+    public static function beforeAddLinkToJob(&$one, $url);
 }

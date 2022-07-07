@@ -20,19 +20,30 @@ while($one = $redis->lPop("spider_txt")){
     for ($page = 1; $page <= $factory::needPages(); $page++){
         $url = $factory::buildContentPagesUrl($one['link'], $page);
 
+        try{
         if ($factory::needJS()){
             $ql = QueryList::getInstance()->use(\QL\Ext\PhantomJs::class, __DIR__."\phantomjs\bin\phantomjs.exe")->browser(function (\JonnyW\PhantomJs\Http\RequestInterface $r) use($url){
                 $r->setMethod('GET');
                 $r->setUrl($url);
                 $r->setTimeout(10000); // 10 seconds
-                $r->setDelay(0.01); // 3 seconds
+                $r->setDelay(0.1); // 3 seconds
                 return $r;
             });
         }else{
             $ql = QueryList::get($url);
         }
+        }catch (\Exception $exception){
+            sleep(1);
+            $redis->lPush("spider_txt", json_encode($one, 256));
+            continue 2;
+        }
         $rules = $factory::buildContentRules();
         $rt = $ql->rules($rules)->query()->getData()->all();
+        if (!$rt){
+            echo $url . " ----- 采集错误\n";
+            $redis->lPush("spider_txt", json_encode($one, 256));
+            continue 2;
+        }
 
         if ($page == 1){
             $writer .=  $rt['title']."\n\n";

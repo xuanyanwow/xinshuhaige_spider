@@ -10,8 +10,8 @@ use QL\QueryList;
 
 
 $total_page = 1;// 章节列表总共几页
-$bookName = "三寸人间";
-$url = "https://www.vipzhuishu.com/book/8.html";
+$bookName = "我有一座恐怖屋";
+$url = "https://www.xbiquge.la/19/19653/";
 
 /** ========================================= 以上参数手动填  =================================== */
 
@@ -32,7 +32,7 @@ for ($i = 1; $i <= $total_page; $i++) {
     $rt    = $ql->rules($rules)->range($range)->query()->getData();
 
     foreach ($rt->all() as $item => $one) {
-        $factory::beforeAddLinkToJob($one);
+        $factory::beforeAddLinkToJob($one, $url);
         $nowChapter++;
         $one['chapter']  = $nowChapter;
         $one['bookName'] = $bookName;
