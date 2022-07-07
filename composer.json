@@ -1,5 +1,13 @@
 {
     "require": {
-        "jaeger/querylist": "^4.2"
+        "jaeger/querylist": "^4.2",
+        "jaeger/querylist-phantomjs": "^4.0",
+        "workerman/workerman": "^4.0",
+      "ext-redis": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "app\\": "app/"
+        }
     }
 }

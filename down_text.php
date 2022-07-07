@@ -1,26 +1,48 @@
 <?php
 require_once("vendor/autoload.php");
 
+use app\config\RedisConfig;
+use app\facade\FactoryFacade;
+use app\i\FactoryInterface;
 use QL\QueryList;
 
 
-$book_id = 78156;
-$url = "https://mm.xinshuhaige.org/";
+$redis = new Redis();
+$redis->connect(RedisConfig::$host, RedisConfig::$port);
+$redis->auth(RedisConfig::$auth);
 
-$redis = new Redis(); 
-$redis->connect('127.0.0.1', 6379);
-$redis->auth('123');
-$zcad = $redis->ZCARD($book_id);
-for($i =1;$i<=$zcad;$i++){
-    $link = $redis->zrange($book_id, $i-1, $i-1);
-    
-    $ql = QueryList::get($url.$link[0]);
-    $rules = [
-        'title' => ['h1.headline','text'],
-        'content' => ['div.content','text'],
-    ];
-    $rt = $ql->rules($rules)->query()->getData()->all();
-    
-    // 生成txt
-    file_put_contents(__DIR__."/{$book_id}.txt", $rt['title']."\n\n".$rt['content']."\n\n",FILE_APPEND);
+while($one = $redis->lPop("spider_txt")){
+    $one = json_decode($one, true);
+    /** @var FactoryInterface $factory */
+    [$factory, $bookId] = FactoryFacade::parser($one['link']);
+
+    $writer = '';
+    for ($page = 1; $page <= $factory::needPages(); $page++){
+        $url = $factory::buildContentPagesUrl($one['link'], $page);
+
+        if ($factory::needJS()){
+            $ql = QueryList::getInstance()->use(\QL\Ext\PhantomJs::class, __DIR__."\phantomjs\bin\phantomjs.exe")->browser(function (\JonnyW\PhantomJs\Http\RequestInterface $r) use($url){
+                $r->setMethod('GET');
+                $r->setUrl($url);
+                $r->setTimeout(10000); // 10 seconds
+                $r->setDelay(0.01); // 3 seconds
+                return $r;
+            });
+        }else{
+            $ql = QueryList::get($url);
+        }
+        $rules = $factory::buildContentRules();
+        $rt = $ql->rules($rules)->query()->getData()->all();
+
+        if ($page == 1){
+            $writer .=  $rt['title']."\n\n";
+        }
+        $writer .= $rt['content']."\n";
+    }
+
+    $dir = __DIR__."/store/{$one['bookName']}/";
+    if (!is_dir($dir)) mkdir($dir);
+
+    file_put_contents($dir."{$one['chapter']}_{$one['title']}.txt", $writer);
+    echo "{$one['chapter']}_{$one['title']}.txt ---- ok\n";
 }

@@ -2,36 +2,40 @@
 require_once("vendor/autoload.php");
 
 
+use app\config\RedisConfig;
+use app\facade\FactoryFacade;
+use app\i\FactoryInterface;
 use QL\QueryList;
 
 
 
-$url = "https://www.xinshuhaige.org/";
+$total_page = 1;// 章节列表总共几页
+$bookName = "三寸人间";
+$url = "https://www.vipzhuishu.com/book/8.html";
+
+/** ========================================= 以上参数手动填  =================================== */
+
+/** @var FactoryInterface $factory */
+[$factory, $bookId] = FactoryFacade::parser($url);
 
 
-$total_page = 4;// 章节列表总共几页
-$book_id = 78156;// 书的id 从url分析
+$redis = new Redis();
+$redis->connect(RedisConfig::$host, RedisConfig::$port);
+$redis->auth(RedisConfig::$auth);
 
-$redis = new Redis(); 
-$redis->connect('127.0.0.1', 6379);
-$redis->auth('123');
-        
-$now = 1;
-for($i = 1 ;$i <= $total_page ; $i++){
-    $ql = QueryList::get($url."/{$book_id}_{$i}/");
-    $rules = [
-        // 采集文章标题
-        'title' => ['a','text'],
-        // 采集链接
-        'link' => ['a','href'],
-    ];
-    // 切片选择器
-    $range = "#novel{$book_id} dd";
-    $rt = $ql->rules($rules)->range($range)->query()->getData();
+$nowChapter = 0;
 
+for ($i = 1; $i <= $total_page; $i++) {
+    $ql    = QueryList::get($factory::buildListUrl($bookId, $i));
+    $rules = $factory::buildListRules();
+    $range = $factory::buildListRange(); // 切片选择器
+    $rt    = $ql->rules($rules)->range($range)->query()->getData();
 
-    foreach ($rt->all() as $one){
-        $redis->zadd($book_id, $now, $one['link']);
-        $now++;
+    foreach ($rt->all() as $item => $one) {
+        $factory::beforeAddLinkToJob($one);
+        $nowChapter++;
+        $one['chapter']  = $nowChapter;
+        $one['bookName'] = $bookName;
+        $redis->lpush("spider_txt", json_encode($one, 256));
     }
 }
