@@ -1,0 +1,5 @@
+更新延迟一下
+
+&lt;script&gt;read3();&lt;script&gt;
+
+
